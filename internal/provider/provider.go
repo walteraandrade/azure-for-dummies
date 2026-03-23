@@ -51,7 +51,7 @@ type LogEntry struct {
 }
 
 type ContainerAppsProvider interface {
-	ListContainerApps(ctx context.Context, sub string) ([]ContainerApp, error)
+	ListContainerApps(ctx context.Context) ([]ContainerApp, error)
 	GetContainerApp(ctx context.Context, rg, name string) (ContainerApp, error)
 	ListRevisions(ctx context.Context, rg, appName string) ([]RevisionInfo, error)
 	StreamLogs(ctx context.Context, rg, appName string) (<-chan LogEntry, error)
@@ -89,7 +89,7 @@ type MetricSeries struct {
 }
 
 type PostgresProvider interface {
-	ListServers(ctx context.Context, sub string) ([]PostgresServer, error)
+	ListServers(ctx context.Context) ([]PostgresServer, error)
 	GetServer(ctx context.Context, rg, name string) (PostgresServer, error)
 	ListFirewallRules(ctx context.Context, rg, serverName string) ([]FirewallRuleInfo, error)
 	GetMetrics(ctx context.Context, resourceID string, names []string) ([]MetricSeries, error)
@@ -115,13 +115,7 @@ type BlobContainer struct {
 }
 
 type StorageProvider interface {
-	ListStorageAccounts(ctx context.Context, sub string) ([]StorageAccount, error)
+	ListStorageAccounts(ctx context.Context) ([]StorageAccount, error)
 	GetStorageAccount(ctx context.Context, rg, name string) (StorageAccount, error)
 	ListBlobContainers(ctx context.Context, rg, accountName string) ([]BlobContainer, error)
-}
-
-type Provider interface {
-	ContainerAppsProvider
-	PostgresProvider
-	StorageProvider
 }

@@ -1,8 +1,6 @@
 package storage
 
 import (
-	"context"
-
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/smarthow/azure-for-dummies/internal/auth"
 	"github.com/smarthow/azure-for-dummies/internal/provider"
@@ -14,13 +12,11 @@ type FetchDoneMsg struct {
 }
 
 type Module struct {
-	auth     *auth.Context
-	provider *azureProvider
+	provider provider.StorageProvider
 }
 
 func New(ctx *auth.Context) *Module {
 	return &Module{
-		auth:     ctx,
 		provider: newAzureProvider(ctx),
 	}
 }
@@ -28,17 +24,10 @@ func New(ctx *auth.Context) *Module {
 func (m *Module) Name() string { return "Storage" }
 func (m *Module) Icon() string { return "[ST]" }
 
-func (m *Module) Fetch(ctx context.Context) tea.Cmd {
-	return func() tea.Msg {
-		accounts, err := m.provider.ListStorageAccounts(ctx, m.auth.SubscriptionID)
-		return FetchDoneMsg{Accounts: accounts, Err: err}
-	}
-}
-
 func (m *Module) ListView() tea.Model {
-	return newListView(m.provider, m.auth)
+	return newListView(m.provider)
 }
 
 func (m *Module) DetailView(id string) tea.Model {
-	return newDetailView(id, m.provider, m.auth)
+	return newDetailView(id, m.provider)
 }

@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/smarthow/azure-for-dummies/internal/provider"
 	"github.com/smarthow/azure-for-dummies/internal/styles"
 )
@@ -43,11 +42,9 @@ func (t overviewTab) View() string {
 	}
 
 	a := t.app
-	labelStyle := lipgloss.NewStyle().Foreground(styles.Subtext).Width(18)
-	valStyle := lipgloss.NewStyle().Foreground(styles.Text)
 
 	row := func(label, val string) string {
-		return labelStyle.Render(label) + valStyle.Render(val)
+		return styles.DetailLabel.Render(label) + styles.DetailValue.Render(val)
 	}
 
 	var lines []string
@@ -69,8 +66,7 @@ func (t overviewTab) View() string {
 	lines = append(lines, "")
 
 	if len(a.Containers) > 0 {
-		headerStyle := lipgloss.NewStyle().Foreground(styles.Mauve).Bold(true)
-		lines = append(lines, headerStyle.Render("Containers"))
+		lines = append(lines, styles.SectionHeader.Render("Containers"))
 
 		for _, c := range a.Containers {
 			lines = append(lines, row("  "+c.Name, fmt.Sprintf("%s  cpu:%.2f  mem:%s", c.Image, c.CPU, c.Memory)))

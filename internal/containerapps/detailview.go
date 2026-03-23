@@ -2,16 +2,19 @@ package containerapps
 
 import (
 	"context"
+	"time"
 
+	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/smarthow/azure-for-dummies/internal/auth"
 	"github.com/smarthow/azure-for-dummies/internal/azutil"
 	"github.com/smarthow/azure-for-dummies/internal/provider"
 	"github.com/smarthow/azure-for-dummies/internal/router"
 	"github.com/smarthow/azure-for-dummies/internal/styles"
 	"github.com/smarthow/azure-for-dummies/internal/tabs"
 )
+
+const logsTabIndex = 2
 
 type detailFetchDoneMsg struct {
 	app  provider.ContainerApp
@@ -23,22 +26,26 @@ type logStreamReadyMsg struct {
 	ch <-chan provider.LogEntry
 }
 
+type logStreamErrMsg struct {
+	err error
+}
+
 type detailView struct {
 	id         string
 	rg         string
 	name       string
-	provider   *azureProvider
-	auth       *auth.Context
+	provider   provider.ContainerAppsProvider
 	tabs       tabs.Model
 	spinner    spinner.Model
 	loading    bool
+	err        error
 	logStarted bool
 	logCancel  context.CancelFunc
 	width      int
 	height     int
 }
 
-func newDetailView(id string, p *azureProvider, a *auth.Context) detailView {
+func newDetailView(id string, p provider.ContainerAppsProvider) detailView {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = s.Style.Foreground(styles.Mauve)
@@ -55,7 +62,6 @@ func newDetailView(id string, p *azureProvider, a *auth.Context) detailView {
 		rg:       azutil.ExtractRG(id),
 		name:     azutil.ExtractName(id),
 		provider: p,
-		auth:     a,
 		tabs:     t,
 		spinner:  s,
 		loading:  true,
@@ -79,6 +85,14 @@ func (v detailView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc", "backspace":
+			type filterable interface {
+				FilterState() list.FilterState
+			}
+			if f, ok := v.tabs.ActiveTab().Content.(filterable); ok {
+				if f.FilterState() == list.Filtering {
+					break
+				}
+			}
 			if v.logCancel != nil {
 				v.logCancel()
 			}
@@ -88,6 +102,7 @@ func (v detailView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case detailFetchDoneMsg:
 		v.loading = false
 		if msg.err != nil {
+			v.err = msg.err
 			return v, nil
 		}
 		overview := newOverviewTab().SetApp(msg.app)
@@ -99,7 +114,7 @@ func (v detailView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return v, nil
 
 	case tabs.TabChangedMsg:
-		if msg.Index == 2 && !v.logStarted {
+		if msg.Index == logsTabIndex && !v.logStarted {
 			v.logStarted = true
 			ctx, cancel := context.WithCancel(context.Background())
 			v.logCancel = cancel
@@ -107,7 +122,7 @@ func (v detailView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return v, func() tea.Msg {
 				ch, err := p.StreamLogs(ctx, rg, name)
 				if err != nil {
-					return logEntryMsg{done: true}
+					return logStreamErrMsg{err: err}
 				}
 				return logStreamReadyMsg{ch: ch}
 			}
@@ -115,16 +130,28 @@ func (v detailView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return v, nil
 
 	case logStreamReadyMsg:
-		lt := v.tabs.Tabs()[2].Content.(logsTab)
+		lt, ok := v.tabs.Tabs()[logsTabIndex].Content.(logsTab)
+		if !ok {
+			return v, nil
+		}
 		lt, cmd := lt.StartStreaming(msg.ch)
-		v.tabs = v.tabs.SetContent(2, lt)
+		v.tabs = v.tabs.SetContent(logsTabIndex, lt)
 		return v, cmd
 
 	case logEntryMsg:
-		tab := v.tabs.Tabs()[2].Content
+		tab := v.tabs.Tabs()[logsTabIndex].Content
 		updated, cmd := tab.Update(msg)
-		v.tabs = v.tabs.SetContent(2, updated)
+		v.tabs = v.tabs.SetContent(logsTabIndex, updated)
 		return v, cmd
+
+	case logStreamErrMsg:
+		lt, ok := v.tabs.Tabs()[logsTabIndex].Content.(logsTab)
+		if !ok {
+			return v, nil
+		}
+		lt.errMsg = msg.err.Error()
+		v.tabs = v.tabs.SetContent(logsTabIndex, lt)
+		return v, nil
 	}
 
 	if v.loading {
@@ -139,6 +166,9 @@ func (v detailView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (v detailView) View() string {
+	if v.err != nil {
+		return styles.ErrorText.Render("Error: " + v.err.Error())
+	}
 	if v.loading {
 		return v.spinner.View() + " Loading " + v.name + "..."
 	}
@@ -149,7 +179,8 @@ func (v detailView) fetchDetail() tea.Cmd {
 	rg, name := v.rg, v.name
 	p := v.provider
 	return func() tea.Msg {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
 		app, err := p.GetContainerApp(ctx, rg, name)
 		if err != nil {
 			return detailFetchDoneMsg{err: err}

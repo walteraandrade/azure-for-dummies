@@ -41,13 +41,8 @@ func (t settingsTab) View() string {
 		return styles.Placeholder.Render("Loading...")
 	}
 
-	headerStyle := lipgloss.NewStyle().Foreground(styles.Mauve).Bold(true)
-	labelStyle := lipgloss.NewStyle().Foreground(styles.Subtext).Width(24)
-	valStyle := lipgloss.NewStyle().Foreground(styles.Text)
-	secretStyle := lipgloss.NewStyle().Foreground(styles.Overlay)
-
 	var lines []string
-	lines = append(lines, headerStyle.Render("Environment Variables"))
+	lines = append(lines, styles.SectionHeader.Render("Environment Variables"))
 
 	for _, c := range t.app.Containers {
 		if len(c.Env) == 0 {
@@ -62,7 +57,7 @@ func (t settingsTab) View() string {
 				val = "••••••"
 				source = " (secret: " + e.SecretRef + ")"
 			}
-			lines = append(lines, labelStyle.Render("  "+e.Name)+valStyle.Render(val)+secretStyle.Render(source))
+			lines = append(lines, styles.DetailLabelWide.Render("  "+e.Name)+styles.DetailValue.Render(val)+styles.SecretValue.Render(source))
 		}
 	}
 

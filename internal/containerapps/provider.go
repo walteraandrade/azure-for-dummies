@@ -21,8 +21,8 @@ func newAzureProvider(ctx *auth.Context) *azureProvider {
 	return &azureProvider{auth: ctx}
 }
 
-func (p *azureProvider) ListContainerApps(ctx context.Context, subID string) ([]provider.ContainerApp, error) {
-	client, err := armappcontainers.NewContainerAppsClient(subID, p.auth.Credential, nil)
+func (p *azureProvider) ListContainerApps(ctx context.Context) ([]provider.ContainerApp, error) {
+	client, err := armappcontainers.NewContainerAppsClient(p.auth.SubscriptionID, p.auth.Credential, nil)
 	if err != nil {
 		return nil, fmt.Errorf("new container apps client: %w", err)
 	}

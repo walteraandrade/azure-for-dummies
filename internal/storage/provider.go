@@ -18,8 +18,8 @@ func newAzureProvider(ctx *auth.Context) *azureProvider {
 	return &azureProvider{auth: ctx}
 }
 
-func (p *azureProvider) ListStorageAccounts(ctx context.Context, subID string) ([]provider.StorageAccount, error) {
-	client, err := armstorage.NewAccountsClient(subID, p.auth.Credential, nil)
+func (p *azureProvider) ListStorageAccounts(ctx context.Context) ([]provider.StorageAccount, error) {
+	client, err := armstorage.NewAccountsClient(p.auth.SubscriptionID, p.auth.Credential, nil)
 	if err != nil {
 		return nil, fmt.Errorf("new storage client: %w", err)
 	}

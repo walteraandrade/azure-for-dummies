@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/smarthow/azure-for-dummies/internal/provider"
 	"github.com/smarthow/azure-for-dummies/internal/styles"
 )
@@ -43,11 +42,9 @@ func (t overviewTab) View() string {
 	}
 
 	s := t.server
-	labelStyle := lipgloss.NewStyle().Foreground(styles.Subtext).Width(18)
-	valStyle := lipgloss.NewStyle().Foreground(styles.Text)
 
 	row := func(label, val string) string {
-		return labelStyle.Render(label) + valStyle.Render(val)
+		return styles.DetailLabel.Render(label) + styles.DetailValue.Render(val)
 	}
 
 	var lines []string
@@ -63,8 +60,7 @@ func (t overviewTab) View() string {
 	lines = append(lines, "")
 
 	if s.FQDN != "" {
-		headerStyle := lipgloss.NewStyle().Foreground(styles.Mauve).Bold(true)
-		lines = append(lines, headerStyle.Render("Connection"))
+		lines = append(lines, styles.SectionHeader.Render("Connection"))
 		lines = append(lines, row("Host", s.FQDN))
 		lines = append(lines, row("Port", "5432"))
 		connStr := fmt.Sprintf("host=%s port=5432 sslmode=require", s.FQDN)

@@ -50,11 +50,15 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		contentMsg := tea.WindowSizeMsg{Width: msg.Width, Height: m.ContentHeight()}
+		var cmds []tea.Cmd
 		for i, t := range m.tabs {
-			updated, _ := t.Content.Update(contentMsg)
+			updated, cmd := t.Content.Update(contentMsg)
 			m.tabs[i].Content = updated
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
 		}
-		return m, nil
+		return m, tea.Batch(cmds...)
 
 	case tea.KeyMsg:
 		switch msg.String() {

@@ -1,11 +1,8 @@
 package home
 
 import (
-	"context"
-
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/smarthow/azure-for-dummies/internal/auth"
 	"github.com/smarthow/azure-for-dummies/internal/module"
 	"github.com/smarthow/azure-for-dummies/internal/router"
 	"github.com/smarthow/azure-for-dummies/internal/styles"
@@ -16,11 +13,10 @@ type Model struct {
 	cursor  int
 	width   int
 	height  int
-	auth    *auth.Context
 }
 
-func New(modules []module.Module, ctx *auth.Context) Model {
-	return Model{modules: modules, auth: ctx}
+func New(modules []module.Module) Model {
+	return Model{modules: modules}
 }
 
 func (m Model) Init() tea.Cmd { return nil }
@@ -32,6 +28,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 	case tea.KeyMsg:
 		switch msg.String() {
+		case "q":
+			return m, tea.Quit
 		case "left", "h":
 			if m.cursor > 0 {
 				m.cursor--
@@ -45,10 +43,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				break
 			}
 			mod := m.modules[m.cursor]
-			return m, tea.Batch(
-				func() tea.Msg { return router.PushMsg{Screen: mod.ListView()} },
-				mod.Fetch(context.Background()),
-			)
+			return m, func() tea.Msg { return router.PushMsg{Screen: mod.ListView()} }
 		}
 	}
 	return m, nil

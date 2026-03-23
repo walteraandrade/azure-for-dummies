@@ -44,12 +44,11 @@ func (t firewallTab) View() string {
 		return styles.Placeholder.Render("No firewall rules configured.")
 	}
 
-	headerStyle := lipgloss.NewStyle().Foreground(styles.Mauve).Bold(true)
 	nameCol := lipgloss.NewStyle().Foreground(styles.Text).Width(30)
 	ipCol := lipgloss.NewStyle().Foreground(styles.Subtext).Width(20)
 
 	var lines []string
-	lines = append(lines, headerStyle.Render("Firewall Rules"))
+	lines = append(lines, styles.SectionHeader.Render("Firewall Rules"))
 	lines = append(lines, nameCol.Render("Name")+ipCol.Render("Start IP")+ipCol.Render("End IP"))
 	lines = append(lines, strings.Repeat("─", 70))
 

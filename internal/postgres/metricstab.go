@@ -48,13 +48,11 @@ func (t metricsTab) View() string {
 		return styles.Placeholder.Render("No metrics available.")
 	}
 
-	headerStyle := lipgloss.NewStyle().Foreground(styles.Mauve).Bold(true)
 	labelStyle := lipgloss.NewStyle().Foreground(styles.Subtext).Width(22)
-	valStyle := lipgloss.NewStyle().Foreground(styles.Text)
 	sparkStyle := lipgloss.NewStyle().Foreground(styles.Green)
 
 	var lines []string
-	lines = append(lines, headerStyle.Render("Metrics (last 1h, 5min intervals)"))
+	lines = append(lines, styles.SectionHeader.Render("Metrics (last 1h, 5min intervals)"))
 	lines = append(lines, "")
 
 	for _, ms := range t.series {
@@ -66,7 +64,7 @@ func (t metricsTab) View() string {
 		lines = append(lines,
 			labelStyle.Render(ms.Name)+
 				sparkStyle.Render(spark)+"  "+
-				valStyle.Render(fmt.Sprintf("%.1f %s", current, ms.Unit)),
+				styles.DetailValue.Render(fmt.Sprintf("%.1f %s", current, ms.Unit)),
 		)
 	}
 

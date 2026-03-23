@@ -1,9 +1,11 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	tea "github.com/charmbracelet/bubbletea"
@@ -54,7 +56,9 @@ type accountListOutput struct {
 
 func ListSubscriptions() tea.Cmd {
 	return func() tea.Msg {
-		out, err := exec.Command("az", "account", "list", "--output", "json").Output()
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		out, err := exec.CommandContext(ctx, "az", "account", "list", "--output", "json").Output()
 		if err != nil {
 			return AuthErrMsg{Err: fmt.Errorf("az account list: %w", err)}
 		}
@@ -71,13 +75,18 @@ func ListSubscriptions() tea.Cmd {
 				IsDefault: a.IsDefault,
 			}
 		}
+		if len(subs) == 0 {
+			return AuthErrMsg{Err: fmt.Errorf("no subscriptions; run az login")}
+		}
 		return SubscriptionsMsg{Subscriptions: subs}
 	}
 }
 
 func ResolveWithSubscription(subID string) tea.Cmd {
 	return func() tea.Msg {
-		out, err := exec.Command("az", "account", "show", "--subscription", subID).Output()
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		out, err := exec.CommandContext(ctx, "az", "account", "show", "--subscription", subID).Output()
 		if err != nil {
 			return AuthErrMsg{Err: fmt.Errorf("az account show: %w", err)}
 		}

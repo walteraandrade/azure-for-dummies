@@ -20,8 +20,8 @@ func newAzureProvider(ctx *auth.Context) *azureProvider {
 	return &azureProvider{auth: ctx}
 }
 
-func (p *azureProvider) ListServers(ctx context.Context, subID string) ([]provider.PostgresServer, error) {
-	client, err := armpostgresqlflexibleservers.NewServersClient(subID, p.auth.Credential, nil)
+func (p *azureProvider) ListServers(ctx context.Context) ([]provider.PostgresServer, error) {
+	client, err := armpostgresqlflexibleservers.NewServersClient(p.auth.SubscriptionID, p.auth.Credential, nil)
 	if err != nil {
 		return nil, fmt.Errorf("new postgres client: %w", err)
 	}

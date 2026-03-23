@@ -2,10 +2,10 @@ package postgres
 
 import (
 	"context"
+	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/smarthow/azure-for-dummies/internal/auth"
 	"github.com/smarthow/azure-for-dummies/internal/azutil"
 	"github.com/smarthow/azure-for-dummies/internal/provider"
 	"github.com/smarthow/azure-for-dummies/internal/router"
@@ -24,16 +24,16 @@ type detailView struct {
 	id       string
 	rg       string
 	name     string
-	provider *azureProvider
-	auth     *auth.Context
+	provider provider.PostgresProvider
 	tabs     tabs.Model
 	spinner  spinner.Model
 	loading  bool
+	err      error
 	width    int
 	height   int
 }
 
-func newDetailView(id string, p *azureProvider, a *auth.Context) detailView {
+func newDetailView(id string, p provider.PostgresProvider) detailView {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = s.Style.Foreground(styles.Mauve)
@@ -49,7 +49,6 @@ func newDetailView(id string, p *azureProvider, a *auth.Context) detailView {
 		rg:       azutil.ExtractRG(id),
 		name:     azutil.ExtractName(id),
 		provider: p,
-		auth:     a,
 		tabs:     t,
 		spinner:  s,
 		loading:  true,
@@ -79,6 +78,7 @@ func (v detailView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case detailFetchDoneMsg:
 		v.loading = false
 		if msg.err != nil {
+			v.err = msg.err
 			return v, nil
 		}
 		overview := newOverviewTab().SetServer(msg.server)
@@ -102,6 +102,9 @@ func (v detailView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (v detailView) View() string {
+	if v.err != nil {
+		return styles.ErrorText.Render("Error: " + v.err.Error())
+	}
 	if v.loading {
 		return v.spinner.View() + " Loading " + v.name + "..."
 	}
@@ -112,7 +115,8 @@ func (v detailView) fetchDetail() tea.Cmd {
 	rg, name, id := v.rg, v.name, v.id
 	p := v.provider
 	return func() tea.Msg {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
 		server, err := p.GetServer(ctx, rg, name)
 		if err != nil {
 			return detailFetchDoneMsg{err: err}

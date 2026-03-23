@@ -75,3 +75,15 @@ var TabBar = lipgloss.NewStyle().
 	BorderBottom(true).
 	BorderStyle(lipgloss.NormalBorder()).
 	BorderForeground(Surface)
+
+var ErrorText = lipgloss.NewStyle().Foreground(Red)
+
+var DetailLabel = lipgloss.NewStyle().Foreground(Subtext).Width(18)
+
+var DetailLabelWide = lipgloss.NewStyle().Foreground(Subtext).Width(24)
+
+var DetailValue = lipgloss.NewStyle().Foreground(Text)
+
+var SectionHeader = lipgloss.NewStyle().Foreground(Mauve).Bold(true)
+
+var SecretValue = lipgloss.NewStyle().Foreground(Overlay)

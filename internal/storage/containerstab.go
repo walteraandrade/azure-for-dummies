@@ -44,12 +44,11 @@ func (t containersTab) View() string {
 		return styles.Placeholder.Render("No containers found.")
 	}
 
-	headerStyle := lipgloss.NewStyle().Foreground(styles.Mauve).Bold(true)
 	nameCol := lipgloss.NewStyle().Foreground(styles.Text).Width(30)
 	col := lipgloss.NewStyle().Foreground(styles.Subtext).Width(16)
 
 	var lines []string
-	lines = append(lines, headerStyle.Render("Blob Containers"))
+	lines = append(lines, styles.SectionHeader.Render("Blob Containers"))
 	lines = append(lines, nameCol.Render("Name")+col.Render("Access")+col.Render("Lease")+col.Render("Last Modified"))
 	lines = append(lines, strings.Repeat("─", 78))
 

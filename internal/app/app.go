@@ -40,7 +40,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "q", "ctrl+c":
+		case "ctrl+c":
 			return m, tea.Quit
 		}
 
@@ -66,7 +66,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			WithSubscription(ctx.SubscriptionName).
 			WithUser(ctx.UserPrincipal)
 		var cmd tea.Cmd
-		m.router, cmd = m.router.ReplaceRoot(home.New(m.registry.All(), ctx))
+		m.router, cmd = m.router.ReplaceRoot(home.New(m.registry.All()))
 		return m, cmd
 
 	case auth.AuthErrMsg:

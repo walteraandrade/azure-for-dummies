@@ -2,6 +2,7 @@ package containerapps
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -19,6 +20,7 @@ type logsTab struct {
 	lines    []string
 	ch       <-chan provider.LogEntry
 	started  bool
+	errMsg   string
 	width    int
 	height   int
 }
@@ -51,11 +53,7 @@ func (t logsTab) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		line := fmt.Sprintf("%s  %s", msg.entry.Timestamp.Format("15:04:05"), msg.entry.Message)
 		t.lines = append(t.lines, line)
-		content := ""
-		for _, l := range t.lines {
-			content += l + "\n"
-		}
-		t.viewport.SetContent(content)
+		t.viewport.SetContent(strings.Join(t.lines, "\n"))
 		t.viewport.GotoBottom()
 		return t, waitForLog(t.ch)
 	}
@@ -66,6 +64,9 @@ func (t logsTab) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (t logsTab) View() string {
+	if t.errMsg != "" {
+		return styles.Placeholder.Render("Log stream error: " + t.errMsg)
+	}
 	if !t.started {
 		return styles.Placeholder.Render("Press tab to activate log streaming...")
 	}
@@ -76,6 +77,9 @@ func (t logsTab) View() string {
 }
 
 func waitForLog(ch <-chan provider.LogEntry) tea.Cmd {
+	if ch == nil {
+		return nil
+	}
 	return func() tea.Msg {
 		entry, ok := <-ch
 		if !ok {

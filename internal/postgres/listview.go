@@ -1,12 +1,13 @@
 package postgres
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/smarthow/azure-for-dummies/internal/auth"
 	"github.com/smarthow/azure-for-dummies/internal/provider"
 	"github.com/smarthow/azure-for-dummies/internal/router"
 	"github.com/smarthow/azure-for-dummies/internal/styles"
@@ -26,11 +27,11 @@ type listView struct {
 	list     list.Model
 	spinner  spinner.Model
 	loading  bool
-	provider *azureProvider
-	auth     *auth.Context
+	err      error
+	provider provider.PostgresProvider
 }
 
-func newListView(p *azureProvider, a *auth.Context) listView {
+func newListView(p provider.PostgresProvider) listView {
 	l := list.New(nil, list.NewDefaultDelegate(), 0, 0)
 	l.Title = "PostgreSQL Flexible Servers"
 	l.Styles.Title = styles.ListTitle
@@ -39,11 +40,21 @@ func newListView(p *azureProvider, a *auth.Context) listView {
 	s.Spinner = spinner.Dot
 	s.Style = s.Style.Foreground(styles.Mauve)
 
-	return listView{list: l, spinner: s, loading: true, provider: p, auth: a}
+	return listView{list: l, spinner: s, loading: true, provider: p}
 }
 
 func (v listView) Init() tea.Cmd {
-	return v.spinner.Tick
+	return tea.Batch(v.spinner.Tick, v.fetchList())
+}
+
+func (v listView) fetchList() tea.Cmd {
+	p := v.provider
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		servers, err := p.ListServers(ctx)
+		return FetchDoneMsg{Servers: servers, Err: err}
+	}
 }
 
 func (v listView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -53,6 +64,10 @@ func (v listView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case FetchDoneMsg:
 		v.loading = false
+		if msg.Err != nil {
+			v.err = msg.Err
+			return v, nil
+		}
 		items := make([]list.Item, len(msg.Servers))
 		for i, s := range msg.Servers {
 			items[i] = serverItem{server: s}
@@ -61,17 +76,21 @@ func (v listView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return v, cmd
 
 	case tea.KeyMsg:
-		if msg.String() == "esc" {
+		switch msg.String() {
+		case "q":
+			if v.list.FilterState() != list.Filtering {
+				return v, tea.Quit
+			}
+		case "esc":
 			if v.list.FilterState() == list.Filtering {
 				break
 			}
 			return v, func() tea.Msg { return router.PopMsg{} }
-		}
-		if msg.String() == "enter" && !v.loading {
-			if v.list.FilterState() != list.Filtering {
+		case "enter":
+			if !v.loading && v.list.FilterState() != list.Filtering {
 				if sel, ok := v.list.SelectedItem().(serverItem); ok {
 					return v, func() tea.Msg {
-						return router.PushMsg{Screen: newDetailView(sel.server.ID, v.provider, v.auth)}
+						return router.PushMsg{Screen: newDetailView(sel.server.ID, v.provider)}
 					}
 				}
 			}
@@ -92,6 +111,9 @@ func (v listView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (v listView) View() string {
 	if v.loading {
 		return v.spinner.View() + " Loading PostgreSQL servers..."
+	}
+	if v.err != nil {
+		return styles.ErrorText.Render("Error: " + v.err.Error())
 	}
 	return v.list.View()
 }
